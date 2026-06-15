@@ -2,9 +2,12 @@ package com.example.warehouseinventoryapi.mapper;
 
 import com.example.warehouseinventoryapi.dto.request.CreateLocationRequest;
 import com.example.warehouseinventoryapi.dto.request.UpdateLocationRequest;
+import com.example.warehouseinventoryapi.dto.response.AisleResponse;
 import com.example.warehouseinventoryapi.dto.response.LocationResponse;
+import com.example.warehouseinventoryapi.entity.Aisle;
 import com.example.warehouseinventoryapi.entity.Level;
 import com.example.warehouseinventoryapi.entity.Location;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 import java.util.List;
 
@@ -38,5 +41,9 @@ public class LocationMapper {
 
     public List<LocationResponse> toDtoList(List<Location> locations) {
         return locations.stream().map(this::toDto).toList();
+    }
+
+    public Page<LocationResponse> toDtoPage(Page<Location> page) {
+        return page.map(this::toDto);
     }
 }

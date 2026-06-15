@@ -4,6 +4,7 @@ import com.example.warehouseinventoryapi.dto.request.CreateWarehouseRequest;
 import com.example.warehouseinventoryapi.dto.request.UpdateWarehouseRequest;
 import com.example.warehouseinventoryapi.dto.response.WarehouseResponse;
 import com.example.warehouseinventoryapi.entity.Warehouse;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 import java.util.List;
 
@@ -38,5 +39,9 @@ public class WarehouseMapper {
 
     public List<WarehouseResponse> toDtoList(List<Warehouse> warehouses) {
         return warehouses.stream().map(this::toDto).toList();
+    }
+
+    public Page<WarehouseResponse> toDtoPage(Page<Warehouse> page) {
+        return page.map(this::toDto);
     }
 }

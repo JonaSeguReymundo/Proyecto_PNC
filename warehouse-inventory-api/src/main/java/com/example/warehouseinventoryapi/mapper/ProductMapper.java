@@ -2,8 +2,11 @@ package com.example.warehouseinventoryapi.mapper;
 
 import com.example.warehouseinventoryapi.dto.request.CreateProductRequest;
 import com.example.warehouseinventoryapi.dto.request.UpdateProductRequest;
+import com.example.warehouseinventoryapi.dto.response.AisleResponse;
 import com.example.warehouseinventoryapi.dto.response.ProductResponse;
+import com.example.warehouseinventoryapi.entity.Aisle;
 import com.example.warehouseinventoryapi.entity.Product;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 import java.util.List;
 
@@ -55,5 +58,9 @@ public class ProductMapper {
 
     public List<ProductResponse> toDtoList(List<Product> products) {
         return products.stream().map(this::toDto).toList();
+    }
+
+    public Page<ProductResponse> toDtoPage(Page<Product> page) {
+        return page.map(this::toDto);
     }
 }

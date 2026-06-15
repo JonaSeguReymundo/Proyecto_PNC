@@ -1,10 +1,13 @@
 package com.example.warehouseinventoryapi.mapper;
 
 import com.example.warehouseinventoryapi.dto.request.CreateTransferRequest;
+import com.example.warehouseinventoryapi.dto.response.AisleResponse;
 import com.example.warehouseinventoryapi.dto.response.TransferResponse;
+import com.example.warehouseinventoryapi.entity.Aisle;
 import com.example.warehouseinventoryapi.entity.Product;
 import com.example.warehouseinventoryapi.entity.Transfer;
 import com.example.warehouseinventoryapi.entity.Warehouse;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,5 +39,9 @@ public class TransferMapper {
 
     public List<TransferResponse> toDtoList(List<Transfer> transfers) {
         return transfers.stream().map(this::toDto).toList();
+    }
+
+    public Page<TransferResponse> toDtoPage(Page<Transfer> page) {
+        return page.map(this::toDto);
     }
 }

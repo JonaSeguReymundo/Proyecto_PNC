@@ -5,6 +5,7 @@ import com.example.warehouseinventoryapi.dto.request.UpdateAisleRequest;
 import com.example.warehouseinventoryapi.dto.response.AisleResponse;
 import com.example.warehouseinventoryapi.entity.Aisle;
 import com.example.warehouseinventoryapi.entity.Warehouse;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 import java.util.List;
 
@@ -35,5 +36,9 @@ public class AisleMapper {
 
     public List<AisleResponse> toDtoList(List<Aisle> aisles) {
         return aisles.stream().map(this::toDto).toList();
+    }
+
+    public Page<AisleResponse> toDtoPage(Page<Aisle> page) {
+        return page.map(this::toDto);
     }
 }
