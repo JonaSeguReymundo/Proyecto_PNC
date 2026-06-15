@@ -1,6 +1,8 @@
 package com.example.warehouseinventoryapi.repository;
 
 import com.example.warehouseinventoryapi.entity.Location;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -18,4 +20,10 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
 
     // Retrieves all locations belonging to a specific level.
     List<Location> findByLevelId(Long levelId);
+
+    // Retrieves a paginated list of locations based on their occupancy status.
+    Page<Location> findByOccupied(Boolean occupied, Pageable pageable);
+
+    // Retrieves a paginated list of all locations belonging to a specific level.
+    Page<Location> findByLevelId(Long levelId, Pageable pageable);
 }
