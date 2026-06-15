@@ -1,9 +1,7 @@
 package com.example.warehouseinventoryapi.mapper;
 
 import com.example.warehouseinventoryapi.dto.request.CreateTransferRequest;
-import com.example.warehouseinventoryapi.dto.response.AisleResponse;
 import com.example.warehouseinventoryapi.dto.response.TransferResponse;
-import com.example.warehouseinventoryapi.entity.Aisle;
 import com.example.warehouseinventoryapi.entity.Product;
 import com.example.warehouseinventoryapi.entity.Transfer;
 import com.example.warehouseinventoryapi.entity.Warehouse;
