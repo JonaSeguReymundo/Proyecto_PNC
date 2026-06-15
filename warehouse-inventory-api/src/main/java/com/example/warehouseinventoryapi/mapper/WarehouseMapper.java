@@ -41,6 +41,18 @@ public class WarehouseMapper {
         return warehouses.stream().map(this::toDto).toList();
     }
 
+    public void updateEntityFromDto(UpdateWarehouseRequest request, Warehouse existingWarehouse) {
+        if (request.name() != null) {
+            existingWarehouse.setName(request.name());
+        }
+        if (request.address() != null) {
+            existingWarehouse.setAddress(request.address());
+        }
+        if (request.active() != null) {
+            existingWarehouse.setActive(request.active());
+        }
+    }
+
     public Page<WarehouseResponse> toDtoPage(Page<Warehouse> page) {
         return page.map(this::toDto);
     }

@@ -60,6 +60,17 @@ public class ProductMapper {
         return products.stream().map(this::toDto).toList();
     }
 
+    public void updateEntityFromDto(UpdateProductRequest request, Product product) {
+        if (request.name() != null) product.setName(request.name());
+        if (request.description() != null) product.setDescription(request.description());
+        if (request.weight() != null) product.setWeight(request.weight());
+        if (request.length() != null) product.setLength(request.length());
+        if (request.width() != null) product.setWidth(request.width());
+        if (request.height() != null) product.setHeight(request.height());
+        if (request.minimumStock() != null) product.setMinimumStock(request.minimumStock());
+        if (request.active() != null) product.setActive(request.active());
+    }
+
     public Page<ProductResponse> toDtoPage(Page<Product> page) {
         return page.map(this::toDto);
     }

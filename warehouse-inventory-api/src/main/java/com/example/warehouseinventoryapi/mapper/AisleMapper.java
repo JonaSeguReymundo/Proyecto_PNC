@@ -38,6 +38,10 @@ public class AisleMapper {
         return aisles.stream().map(this::toDto).toList();
     }
 
+    public void updateEntityFromDto(UpdateAisleRequest request, Aisle aisle) {
+        if (request.code() != null) aisle.setCode(request.code());
+    }
+
     public Page<AisleResponse> toDtoPage(Page<Aisle> page) {
         return page.map(this::toDto);
     }

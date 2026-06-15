@@ -1,6 +1,7 @@
 package com.example.warehouseinventoryapi.mapper;
 
 import com.example.warehouseinventoryapi.dto.request.CreateLevelRequest;
+import com.example.warehouseinventoryapi.dto.request.UpdateAisleRequest;
 import com.example.warehouseinventoryapi.dto.request.UpdateLevelRequest;
 import com.example.warehouseinventoryapi.dto.response.AisleResponse;
 import com.example.warehouseinventoryapi.dto.response.LevelResponse;
@@ -38,6 +39,12 @@ public class LevelMapper {
 
     public List<LevelResponse> toDtoList(List<Level> levels) {
         return levels.stream().map(this::toDto).toList();
+    }
+
+    public void updateEntityFromDto(UpdateLevelRequest request, Level level) {
+        if (request.number() != null) {
+            level.setNumber(request.number());
+        }
     }
 
     public Page<LevelResponse> toDtoPage(Page<Level> page) {
