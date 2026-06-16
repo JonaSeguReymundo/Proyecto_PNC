@@ -1,7 +1,6 @@
 package com.example.warehouseinventoryapi.service;
 
 import com.example.warehouseinventoryapi.dto.request.CreateProductLocationRequest;
-import com.example.warehouseinventoryapi.dto.request.UpdateProductLocationRequest;
 import com.example.warehouseinventoryapi.dto.response.PageableResponse;
 import com.example.warehouseinventoryapi.dto.response.ProductLocationResponse;
 import org.springframework.data.domain.Pageable;

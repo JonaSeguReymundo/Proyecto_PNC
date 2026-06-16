@@ -1,9 +1,7 @@
 package com.example.warehouseinventoryapi.mapper;
 
 import com.example.warehouseinventoryapi.dto.request.CreateProductLocationRequest;
-import com.example.warehouseinventoryapi.dto.response.AisleResponse;
 import com.example.warehouseinventoryapi.dto.response.ProductLocationResponse;
-import com.example.warehouseinventoryapi.entity.Aisle;
 import com.example.warehouseinventoryapi.entity.Location;
 import com.example.warehouseinventoryapi.entity.Product;
 import com.example.warehouseinventoryapi.entity.ProductLocation;
