@@ -46,7 +46,9 @@ public class LocationController {
     }
 
     @GetMapping("/occupied")
-    public PageableResponse<LocationResponse> getByOccupied(@RequestParam Boolean occupied, Pageable pageable) {
+    public PageableResponse<LocationResponse> getByOccupied(
+            @RequestParam(required = false, defaultValue = "true") Boolean occupied,
+            Pageable pageable) {
         return service.getByOccupied(occupied, pageable);
     }
 
