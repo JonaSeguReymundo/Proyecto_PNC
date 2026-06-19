@@ -1,6 +1,7 @@
 spring:
   application:
     name: warehouse-inventory-api
+  # ── SQL ──────────────────────────────────────────────────────────────────────
   datasource:
     url: ${DB_URL}
     username: ${DB_USER}
@@ -12,3 +13,20 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+# ── JWT ──────────────────────────────────────────────────────────────────────
+security:
+  jwt:
+    # Generar secret en consola con: openssl rand -base64 64
+    secret: ${JWT_SECRET}
+    # Tiempo de vida del access token (15 min en producción; 60 min aquí para dev)
+    access-token-expiration-ms: ${JWT_ACCESS_EXP_MS}
+    # Tiempo de vida del refresh token (7 días)
+    refresh-token-expiration-ms: ${JWT_REFRESH_EXP_MS}
+# ── Swagger / SpringDoc ───────────────────────────────────────────────────────
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    # El botón Authorize en Swagger pide el Bearer token
+    persist-authorization: true
