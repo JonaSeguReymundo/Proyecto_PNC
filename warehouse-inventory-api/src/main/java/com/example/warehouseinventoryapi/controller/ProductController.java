@@ -1,4 +1,5 @@
 package com.example.warehouseinventoryapi.controller;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import com.example.warehouseinventoryapi.dto.request.CreateProductRequest;
 import com.example.warehouseinventoryapi.dto.request.UpdateProductRequest;
@@ -11,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
