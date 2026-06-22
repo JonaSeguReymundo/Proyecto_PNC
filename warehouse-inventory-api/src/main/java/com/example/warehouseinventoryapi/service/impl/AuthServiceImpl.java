@@ -4,15 +4,18 @@ import com.example.warehouseinventoryapi.dto.request.LoginRequest;
 import com.example.warehouseinventoryapi.dto.request.RefreshTokenRequest;
 import com.example.warehouseinventoryapi.dto.response.AuthResponse;
 import com.example.warehouseinventoryapi.entity.User;
+import com.example.warehouseinventoryapi.repository.UserRepository;
 import com.example.warehouseinventoryapi.security.util.JwtProperties;
 import com.example.warehouseinventoryapi.security.util.JwtUtil;
 import com.example.warehouseinventoryapi.service.AuditLogService;
 import com.example.warehouseinventoryapi.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.stream.Collectors;
@@ -36,6 +39,7 @@ import java.util.stream.Collectors;
 public class AuthServiceImpl implements AuthService {
 
     private final AuthenticationManager authManager;
+    private final UserRepository        userRepository;
     private final JwtUtil               jwtUtil;
     private final JwtProperties         jwtProps;
     private final AuditLogService       auditLogService;
@@ -72,7 +76,19 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String username = jwtUtil.extractUsername(token);
-        String roles    = jwtUtil.extractRoles(token);
+
+        // Verificar que el usuario aún exista y esté activo
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+
+        if (!user.isEnabled()) {
+            throw new DisabledException("User account is disabled");
+        }
+
+        // Obtener roles actualizados desde la BD en lugar de confiar en el token viejo
+        String roles = user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(","));
 
         // Rotación: emitir par nuevo
         String newAccess  = jwtUtil.generateAccessToken(username, roles);

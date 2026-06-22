@@ -62,8 +62,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // para no hacer un hit a BD en cada request
                     List<SimpleGrantedAuthority> authorities = parseRoles(jwtUtil.extractRoles(token));
 
+                    // Usar authorities desde userDetails (BD) para garantizar que los permisos
+                    // estén actualizados en tiempo real si el usuario cambia de rol.
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                     SecurityContextHolder.getContext().setAuthentication(authToken);
