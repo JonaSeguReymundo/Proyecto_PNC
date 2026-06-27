@@ -24,11 +24,8 @@ import java.util.stream.Collectors;
 
 /**
  * Filtro que se ejecuta una vez por request.
- * Extrae el Bearer token del header Authorization, lo valida y
- * carga el usuario en el SecurityContext.
- *
- * Solo acepta access tokens; los refresh tokens son rechazados aquí
- * (se usan únicamente en /api/auth/refresh).
+ * Extrae el Bearer token del header Authorization, valida que sea un access token,
+ * y carga la autenticación en el SecurityContext.
  */
 @Slf4j
 @Component
@@ -58,22 +55,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 if (userDetails.isEnabled()) {
-                    // Construir authorities desde el claim "roles" del token
-                    // para no hacer un hit a BD en cada request
                     List<SimpleGrantedAuthority> authorities = parseRoles(jwtUtil.extractRoles(token));
 
-                    // Usar authorities desde userDetails (BD) para garantizar que los permisos
-                    // estén actualizados en tiempo real si el usuario cambia de rol.
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
 
             } catch (Exception ex) {
-                // Token inválido o expirado: no autenticar, dejar que 401 fluya
                 log.debug("JWT validation failed: {}", ex.getMessage());
             }
         }
@@ -81,7 +72,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /** Extrae el token del header "Authorization: Bearer <token>" */
     private String extractToken(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
         if (StringUtils.hasText(header) && header.startsWith("Bearer ")) {
@@ -90,10 +80,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
 
-    /**
-     * Convierte el claim "roles" (ej: "ROLE_ADMINISTRADOR,ROLE_JEFE_ALMACEN")
-     * en una lista de GrantedAuthority.
-     */
     private List<SimpleGrantedAuthority> parseRoles(String rolesStr) {
         if (!StringUtils.hasText(rolesStr)) return List.of();
         return Arrays.stream(rolesStr.split(","))

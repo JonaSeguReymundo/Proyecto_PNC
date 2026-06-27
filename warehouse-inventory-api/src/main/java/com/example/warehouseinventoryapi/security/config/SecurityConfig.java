@@ -28,13 +28,15 @@ import java.util.List;
 /**
  * Configuración principal de Spring Security.
  *
- * Reglas de acceso por rol:
- *   - ADMINISTRADOR : acceso total
- *   - JEFE_ALMACEN  : lectura/escritura de inventario; sin gestión de usuarios
- *   - OPERARIO      : solo lectura de productos y almacenes
+ * Reglas de acceso por rol (según Proyecto 8):
+ *   - ADMINISTRADOR : acceso total (configura almacenes/políticas, ve auditoría global)
+ *   - JEFE_ALMACEN  : gestiona inventario, ordena traslados, revisa alertas
+ *   - OPERARIO      : registra entradas/salidas y escanea códigos; lectura en el resto
  *
- * Swagger (/swagger-ui/**, /api-docs/**) es público para facilitar
- * la evaluación. En producción se protegería también con JWT.
+ * IMPORTANTE: las reglas se evalúan EN ORDEN. Las más específicas (que incluyen
+ * al OPERARIO en entradas/salidas) van ANTES que las reglas generales por método.
+ *
+ * Swagger (/swagger-ui/**, /api-docs/**) es público para facilitar la evaluación.
  */
 @Configuration
 @EnableWebSecurity
@@ -63,23 +65,26 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // públicas
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                        // gestión de usuarios: solo ADMINISTRADOR
                         .requestMatchers("/api/users/**").hasRole("ADMINISTRADOR")
-                        // auditoría: solo ADMINISTRADOR o JEFE_ALMACEN
-                        .requestMatchers("/api/audit/**").hasAnyRole("ADMINISTRADOR", "JEFE_ALMACEN")
-                        // escritura en inventario/almacenes: ADMINISTRADOR y JEFE_ALMACEN
+                        .requestMatchers("/api/audit/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/api/inventory/entries/**")
+                        .hasAnyRole("ADMINISTRADOR", "JEFE_ALMACEN", "OPERARIO")
+                        .requestMatchers(HttpMethod.POST, "/api/inventory/exits/**")
+                        .hasAnyRole("ADMINISTRADOR", "JEFE_ALMACEN", "OPERARIO")
+                        .requestMatchers("/api/scan/**")
+                        .hasAnyRole("ADMINISTRADOR", "JEFE_ALMACEN", "OPERARIO")
                         .requestMatchers(HttpMethod.POST,   "/api/**").hasAnyRole("ADMINISTRADOR", "JEFE_ALMACEN")
                         .requestMatchers(HttpMethod.PUT,    "/api/**").hasAnyRole("ADMINISTRADOR", "JEFE_ALMACEN")
                         .requestMatchers(HttpMethod.PATCH,  "/api/**").hasAnyRole("ADMINISTRADOR", "JEFE_ALMACEN")
+
                         .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMINISTRADOR")
+
                         // lectura: cualquier usuario autenticado
                         .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
-                // El filtro JWT va antes del filtro de usuario/contraseña estándar
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -106,7 +111,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*")); // En producción, especificar dominios
+        configuration.setAllowedOrigins(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
         configuration.setExposedHeaders(List.of("Authorization"));
