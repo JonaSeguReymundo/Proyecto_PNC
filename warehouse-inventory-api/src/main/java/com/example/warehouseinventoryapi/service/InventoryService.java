@@ -1,6 +1,7 @@
 package com.example.warehouseinventoryapi.service;
 
 import com.example.warehouseinventoryapi.dto.request.PurchaseEntryRequest;
+import com.example.warehouseinventoryapi.dto.request.OrderExitRequest;
 import com.example.warehouseinventoryapi.dto.response.BatchResponse;
 import com.example.warehouseinventoryapi.dto.response.PageableResponse;
 import com.example.warehouseinventoryapi.dto.response.MovementResponse;
@@ -18,4 +19,6 @@ public interface InventoryService {
     List<BatchResponse> getBatches(Long productId, Long warehouseId);
 
     PageableResponse<MovementResponse> getMovements(Long productId, Pageable pageable);
+
+    List<MovementResponse> registerOrderExit(OrderExitRequest request);
 }

@@ -1,6 +1,7 @@
 package com.example.warehouseinventoryapi.controller;
 
 import com.example.warehouseinventoryapi.dto.request.PurchaseEntryRequest;
+import com.example.warehouseinventoryapi.dto.request.OrderExitRequest;
 import com.example.warehouseinventoryapi.dto.response.BatchResponse;
 import com.example.warehouseinventoryapi.dto.response.PageableResponse;
 import com.example.warehouseinventoryapi.dto.response.MovementResponse;
@@ -29,6 +30,13 @@ public class InventoryController {
     @Operation(summary = "Registrar entrada de mercancia por compra")
     public BatchResponse registerEntry(@Valid @RequestBody PurchaseEntryRequest request) {
         return service.registerPurchaseEntry(request);
+    }
+
+    @PostMapping("/exits")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Registrar salida de mercancia por pedido (descuenta con FIFO)")
+    public List<MovementResponse> registerExit(@Valid @RequestBody OrderExitRequest request) {
+        return service.registerOrderExit(request);
     }
 
     @GetMapping("/stock")

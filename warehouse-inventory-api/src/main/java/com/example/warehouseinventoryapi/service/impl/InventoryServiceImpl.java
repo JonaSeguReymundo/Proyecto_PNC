@@ -1,6 +1,8 @@
 package com.example.warehouseinventoryapi.service.impl;
 
 import com.example.warehouseinventoryapi.dto.request.PurchaseEntryRequest;
+import com.example.warehouseinventoryapi.dto.request.OrderExitRequest;
+import com.example.warehouseinventoryapi.inventory.FifoAllocator;
 import com.example.warehouseinventoryapi.dto.response.BatchResponse;
 import com.example.warehouseinventoryapi.dto.response.PageableResponse;
 import com.example.warehouseinventoryapi.dto.response.MovementResponse;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -33,6 +36,7 @@ public class InventoryServiceImpl implements InventoryService {
     private final InventoryMapper mapper;
     private final PageableMapper pageableMapper;
     private final AuditLogService auditLogService;
+    private final FifoAllocator fifoAllocator;
 
     @Override
     @Transactional
@@ -127,6 +131,55 @@ public class InventoryServiceImpl implements InventoryService {
                 movementRepository.findByProductIdOrderByCreatedAtDesc(productId, pageable);
         List<MovementResponse> dtoList = mapper.toMovementDtoList(page.getContent());
         return pageableMapper.toPageableResponse(page, dtoList);
+    }
+
+    @Override
+    @Transactional
+    public List<MovementResponse> registerOrderExit(OrderExitRequest request) {
+        Product product = productRepository.findById(request.productId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product not found with id: " + request.productId()));
+
+        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Warehouse not found with id: " + request.warehouseId()));
+
+        List<InventoryBatch> batches = batchRepository
+                .findByProductIdAndWarehouseIdAndAvailableQuantityGreaterThanOrderByReceivedAtAsc(
+                        request.productId(), request.warehouseId(), 0);
+
+        List<FifoAllocator.Allocation> allocations =
+                fifoAllocator.allocate(batches, request.quantity());
+
+        String username = currentUsername();
+        LocalDateTime now = LocalDateTime.now();
+        List<InventoryMovement> movements = new ArrayList<>();
+
+        for (FifoAllocator.Allocation alloc : allocations) {
+            InventoryBatch batch = alloc.batch();
+            int taken = alloc.quantityTaken();
+
+            batch.setAvailableQuantity(batch.getAvailableQuantity() - taken);
+            batchRepository.save(batch);
+
+            InventoryMovement movement = InventoryMovement.builder()
+                    .batch(batch)
+                    .product(product)
+                    .warehouse(warehouse)
+                    .type(MovementType.EXIT_ORDER)
+                    .quantity(taken)
+                    .performedBy(username)
+                    .createdAt(now)
+                    .reference(request.reference())
+                    .build();
+
+            movements.add(movementRepository.save(movement));
+        }
+
+        auditLogService.record(username, "EXIT_ORDER", "inventory_batches",
+                "Salida FIFO de " + request.quantity() + " unidades del producto " + product.getSku());
+
+        return mapper.toMovementDtoList(movements);
     }
 
     private String currentUsername() {
