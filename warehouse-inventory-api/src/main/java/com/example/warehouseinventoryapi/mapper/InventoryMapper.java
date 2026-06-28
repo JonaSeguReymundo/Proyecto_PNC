@@ -2,8 +2,10 @@ package com.example.warehouseinventoryapi.mapper;
 
 import com.example.warehouseinventoryapi.dto.response.BatchResponse;
 import com.example.warehouseinventoryapi.dto.response.MovementResponse;
+import com.example.warehouseinventoryapi.dto.response.ReservationResponse;
 import com.example.warehouseinventoryapi.entity.InventoryBatch;
 import com.example.warehouseinventoryapi.entity.InventoryMovement;
+import com.example.warehouseinventoryapi.entity.StockReservation;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -47,5 +49,24 @@ public class InventoryMapper {
 
     public List<MovementResponse> toMovementDtoList(List<InventoryMovement> movements) {
         return movements.stream().map(this::toMovementDto).toList();
+    }
+
+    public ReservationResponse toReservationDto(StockReservation r) {
+        return new ReservationResponse(
+                r.getId(),
+                r.getProduct().getId(),
+                r.getProduct().getSku(),
+                r.getWarehouse().getId(),
+                r.getQuantity(),
+                r.getStatus(),
+                r.getReference(),
+                r.getCreatedAt(),
+                r.getExpiresAt(),
+                r.getCreatedBy()
+        );
+    }
+
+    public List<ReservationResponse> toReservationDtoList(List<StockReservation> reservations) {
+        return reservations.stream().map(this::toReservationDto).toList();
     }
 }
