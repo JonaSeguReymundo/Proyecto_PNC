@@ -16,4 +16,6 @@ public interface RackRepository extends JpaRepository<Rack, Long> {
 
     // Retrieves a paginated list of all racks belonging to a specific aisle.
     Page<Rack> findByAisleId(Long aisleId, Pageable pageable);
+
+    boolean existsByCodeAndAisleId(String code, Long aisleId);
 }
