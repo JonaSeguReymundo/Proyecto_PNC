@@ -1,174 +1,102 @@
-# Integrante 2 – Seguridad y API REST
+# 📦 Warehouse Inventory API - Sistema de Gestión de Inventario y Almacenes (WMS)
 
-## Stack
-- Spring Boot 4.1 · Java 21 · Spring Security 6
-- OAuth2 Resource Server (HMAC-SHA256 / HS256)
-- SpringDoc OpenAPI 2.x (Swagger UI protegido con JWT)
-- AOP para auditoría automática
+Este proyecto consiste en una solución de backend robusta desarrollada en **Java con Spring Boot 3**, estructurada bajo una **Arquitectura N-Capas**. Está diseñada para gestionar la infraestructura física de almacenes (pasillos, racks, niveles, ubicaciones), catálogos de productos, flujos de mercancía (entradas, salidas, transferencias, reservas) y aplicar algoritmos inteligentes de negocio (FIFO, ROP, Clasificación ABC).
 
----
+## 👥 Equipo de Desarrollo y Roles
 
-## Archivos entregados
+- **Integrante 1: Jonatan Segura** — *Arquitectura base, Modelado de Datos (DER), Repositorios y Desafío de Escalabilidad (Patrón Strategy para Asignación de Ubicaciones).*
+- **Integrante 2: Daniel Juarez** — *Capa de Seguridad, Autenticación y Autorización con JWT, Manejo Global de Excepciones, API REST y Sistema de Auditoría con AOP.*
+- **Integrante 3 y 4: German Sanchez y Cristian Rodriguez** — *Revisión y optimización de código base, aseguramiento de calidad, Capa de Negocio Avanzada, Asignación FIFO de Lotes, Control de Reservas de Stock, Automatización de Expiraciones y Reportes de Inteligencia de Negocio (ROP / ABC).*
 
-```
-pom.xml                          ← dependencias actualizadas
-application.yaml                 ← configuración JWT + Swagger
-schema_security.sql              ← DER y datos semilla
+## 🎯 Objetivo del Proyecto y Justificación Técnica
 
-entity/
-  RoleName.java                  ← enum: ADMINISTRADOR | JEFE_ALMACEN | OPERARIO
-  Role.java                      ← entidad JPA tabla roles
-  User.java                      ← entidad JPA tabla users (implementa UserDetails)
-  AuditLog.java                  ← entidad JPA tabla audit_log
+El objetivo principal es resolver los problemas críticos de visibilidad de existencias, optimización de espacio físico y control de costos en entornos logísticos complejos.
 
-repository/
-  UserRepository.java
-  RoleRepository.java
-  AuditLogRepository.java
+### Justificación de la Arquitectura:
 
-security/
-  util/
-    JwtProperties.java           ← mapea security.jwt.* del yaml
-    JwtUtil.java                 ← genera/decodifica tokens (access + refresh)
-  config/
-    JwtConfig.java               ← beans JwtEncoder / JwtDecoder (NimbusJwt)
-    SecurityConfig.java          ← filtros, roles, endpoints públicos
-  filter/
-    JwtAuthenticationFilter.java ← extrae Bearer token y autentica cada request
-  service/
-    UserDetailsServiceImpl.java  ← carga usuario desde BD para Spring Security
+- **Separación de Responsabilidades (N-Capas):** División estricta en capas de Presentación (`Controller`), Negocio (`Service`), Acceso a Datos (`Repository`) y Dominio (`Entity`). Esto asegura que las reglas de negocio estén totalmente aisladas de los protocolos de transporte y de la persistencia física.
+- **Uso Estricto de DTOs:** Ninguna entidad JPA se expone directamente hacia el cliente. Se manejan Java Records independientes para `Request` y `Response` para proteger la integridad del modelo y encapsular los datos de manera limpia.
+- **Seguridad Avanzada:** Implementation de Spring Security acoplado a un mecanismo de tokens duales (Access Token de vida corta y Refresh Token de vida larga) gestionados mediante variables de entorno eficientes.
+- **Auditoría No Invasiva (AOP):** Registro de operaciones críticas (`audit_log`) implementado con Programación Orientada a Aspectos, evitando duplicidad de código en los servicios de negocio.
 
-service/
-  AuthService.java / impl/AuthServiceImpl.java      ← login + refresh
-  UserService.java / impl/UserServiceImpl.java       ← CRUD usuarios
-  AuditLogService.java / impl/AuditLogServiceImpl.java
+## 🛠️ Tecnologías y Frameworks
 
-controller/
-  AuthController.java            ← POST /api/auth/login | /api/auth/refresh
-  UserController.java            ← CRUD /api/users/** (solo ADMINISTRADOR)
-  AuditLogController.java        ← GET /api/audit/** (ADMINISTRADOR | JEFE_ALMACEN)
+- **Lenguaje:** Java 17
+- **Framework Principal:** Spring Boot 3.x
+- **Persistencia:** Spring Data JPA / Hibernate
+- **Base de Datos:** PostgreSQL
+- **Seguridad:** Spring Security + JSON Web Tokens (JWT)
+- **Documentación:** SpringDoc OpenAPI (Swagger UI)
+- **Validación:** Jakarta Validation (`@NotNull`, `@NotBlank`, `@Positive`, etc.)
 
-dto/request/  LoginRequest · RefreshTokenRequest · CreateUserRequest · UpdateUserRequest
-dto/response/ AuthResponse · UserResponse · AuditLogResponse
+## ⚙️ Requisitos Previos
 
-audit/
-  AuditAspect.java               ← AOP: registra create/update/delete automáticamente
+- **Java Development Kit (JDK):** Versión 17 o superior.
+- **Apache Maven:** Versión 3.8 o superior.
+- **PostgreSQL:** Instancia local o remota en ejecución.
 
-config/
-  OpenApiConfig.java             ← Swagger con botón Authorize (Bearer JWT)
-  DataInitializer.java           ← crea roles y usuario admin al arrancar
+## 🚀 Instalación y Configuración del Entorno
 
-exception/
-  GlobalExceptionHandler.java    ← extiende el del Int.1 con 401/403/JWT errors
-```
+### 1. Clonar el repositorio:
 
----
-
-## Variables de entorno requeridas
-
-| Variable | Ejemplo | Descripción |
-|---|---|---|
-| `DB_URL` | `jdbc:postgresql://host:5432/warehouse` | URL de PostgreSQL |
-| `DB_USER` | `postgres` | Usuario BD |
-| `DB_PASSWORD` | `secret` | Contraseña BD |
-| `JWT_SECRET` | `(base64 64 chars)` | Clave HMAC para firmar tokens |
-| `JWT_ACCESS_EXP_MS` | `3600000` | Expiración access token (ms) – default 1h |
-| `JWT_REFRESH_EXP_MS` | `604800000` | Expiración refresh token (ms) – default 7d |
-
-Generar JWT_SECRET seguro:
-```bash
-openssl rand -base64 64
-```
-
----
-
-## Flujo de autenticación
+Bash
 
 ```
-POST /api/auth/login
-Body: { "username": "admin", "password": "Admin1234!" }
-
-→ 200 OK
-{
-  "accessToken":  "eyJ...",   // usar en Authorization: Bearer <token>
-  "refreshToken": "eyJ...",   // guardar; usar en /api/auth/refresh
-  "tokenType":    "Bearer",
-  "accessExpiresIn":  3600000,
-  "refreshExpiresIn": 604800000
-}
+git clone [URL_DE_TU_REPOSITORIO]
+cd warehouse-inventory-api
 ```
 
-**Rotación de refresh token (stateless):**
-```
-POST /api/auth/refresh
-Body: { "refreshToken": "eyJ..." }
+### 2. Configurar las Variables de Entorno (.env):
 
-→ 200 OK  (nuevo par de tokens; el anterior debe descartarse)
-```
+El proyecto utiliza inyección dinámica de propiedades mediante variables de entorno configuradas en el archivo `application.yaml`.
 
----
+Crea un archivo llamado `.env` en la raíz del proyecto (basándote en tu archivo `.env.example`) y asigna tus valores locales correspondientes:
 
-## Roles y permisos
-
-| Endpoint | ADMINISTRADOR | JEFE_ALMACEN | OPERARIO |
-|---|:---:|:---:|:---:|
-| POST/PUT/PATCH `/api/**` | ✅ | ✅ | ❌ |
-| DELETE `/api/**` | ✅ | ❌ | ❌ |
-| GET `/api/**` | ✅ | ✅ | ✅ |
-| `/api/users/**` | ✅ | ❌ | ❌ |
-| `/api/audit/**` | ✅ | ✅ | ❌ |
-| `/api/auth/**` | público | público | público |
-
----
-
-## Swagger UI
+Code snippet
 
 ```
-https://backend-url/swagger-ui.html
+DB_URL=jdbc:postgresql://localhost:5432/tu_base_de_datos
+DB_USER=tu_usuario_postgres
+DB_PASSWORD=tu_contraseña_postgres
+
+# Generar secret en consola con: openssl rand -base64 64
+JWT_SECRET="mi_clave_secreta"
+JWT_ACCESS_EXP_MS=3600000
+JWT_REFRESH_EXP_MS=604800000
 ```
 
-1. Ir a `POST /api/auth/login` → Execute
-2. Copiar `accessToken` de la respuesta
-3. Clic en **Authorize** → pegar el token
-4. Todos los endpoints protegidos ya envían el header automáticamente
+> 💡 **Nota:** Asegúrate de cargar o exportar estas variables en tu entorno de desarrollo o IDE (como IntelliJ IDEA o Eclipse) antes de levantar la aplicación para que Spring Boot pueda resolverlas de forma correcta.
+> 
 
----
+### 3. Compilar el Proyecto:
 
-## Usuario admin por defecto
+Bash
 
 ```
-username : admin
-password : Admin1234!
+mvn clean install
 ```
 
-> ⚠ Cambiar en producción. El `DataInitializer` solo crea el usuario si no existe.
+## 🏃‍♂️ Ejecución de la Aplicación
 
----
+Para iniciar el servidor de desarrollo en el puerto 8081 (especificado en la configuración del servidor), ejecuta el siguiente comando:
 
-## Auditoría automática (AOP)
+Bash
 
-El `AuditAspect` intercepta todos los métodos `create`, `update` y `delete`
-de los servicios y los registra en `audit_log` sin modificar ningún código de negocio.
-El login y el refresh también se registran manualmente desde `AuthServiceImpl`.
-
-Consultar vía:
 ```
-GET /api/audit                      → todos los registros
-GET /api/audit/user/{username}      → por usuario
-GET /api/audit/table/{table}        → por tabla (products, warehouses, etc.)
+mvn spring-boot:run
 ```
 
----
+El backend iniciará correctamente y estará escuchando peticiones en: `http://localhost:8081`
 
-## HTTP Status codes implementados
+## 📚 Documentación Interactiva y Pruebas de la API
 
-| Código | Cuándo |
-|---|---|
-| 200 | GET, login, refresh |
-| 201 | POST de creación |
-| 204 | DELETE |
-| 400 | Validación fallida, argumento inválido |
-| 401 | Token inválido/expirado, credenciales incorrectas |
-| 403 | Rol insuficiente |
-| 404 | Recurso no encontrado |
-| 500 | Error inesperado del servidor |
+### 🛠️ Swagger UI (OpenAPI 3)
+
+La documentación completa de los controladores, esquemas JSON y el botón interactivo de pruebas (*Authorize* para adjuntar tu token Bearer) se genera de manera automática al levantar el proyecto. Puedes acceder de forma directa ingresando al navegador en la siguiente ruta:
+
+- 👉 **URL de Swagger:** [http://localhost:8081/swagger-ui.html](https://www.google.com/search?q=http://localhost:8081/swagger-ui.html)
+- Los metadatos puros e independientes de la especificación en formato JSON se localizan en: [http://localhost:8081/api-docs](https://www.google.com/search?q=http://localhost:8081/api-docs)
+
+### 🛸 Pruebas con Colección de Insomnia
+
+Para agilizar la evaluación de los flujos del sistema (Login, creación de productos, ingresos de inventario, procesos de reservas, confirmación y liberación), se incluye en la raíz del repositorio el archivo de configuración correspondiente a la colección de endpoints listos para importar directamente en tu espacio de trabajo de Insomnia.
