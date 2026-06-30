@@ -16,4 +16,6 @@ public interface LevelRepository extends JpaRepository<Level, Long> {
 
     // Retrieves a paginated list of all levels belonging to a specific rack.
     Page<Level> findByRackId(Long rackId, Pageable pageable);
+
+    boolean existsByNumberAndRackId(Integer number, Long rackId);
 }
