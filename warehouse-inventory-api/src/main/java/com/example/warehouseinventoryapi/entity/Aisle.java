@@ -26,4 +26,8 @@ public class Aisle {
 
     @OneToMany(mappedBy = "aisle", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Rack> racks;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean active = true;
 }

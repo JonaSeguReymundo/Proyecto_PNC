@@ -5,6 +5,7 @@ import com.example.warehouseinventoryapi.dto.request.UpdateAisleRequest;
 import com.example.warehouseinventoryapi.dto.response.AisleResponse;
 import com.example.warehouseinventoryapi.dto.response.PageableResponse;
 import com.example.warehouseinventoryapi.entity.Aisle;
+import com.example.warehouseinventoryapi.exception.DuplicateResourceException;
 import com.example.warehouseinventoryapi.exception.ResourceNotFoundException;
 import com.example.warehouseinventoryapi.mapper.AisleMapper;
 import com.example.warehouseinventoryapi.mapper.PageableMapper;
@@ -29,7 +30,13 @@ public class AisleServiceImpl implements AisleService {
     @Override
     @Transactional
     public AisleResponse create(CreateAisleRequest request) {
+        if (repository.existsByCodeAndWarehouseId(request.code(), request.warehouseId())) {
+            throw new DuplicateResourceException("The aisle with code '" + request.code() + "' already exists in this warehouse.");
+        }
+
         Aisle aisle = mapper.toEntityCreate(request);
+        aisle.setActive(true);
+
         return mapper.toDto(repository.save(aisle));
     }
 
@@ -37,7 +44,13 @@ public class AisleServiceImpl implements AisleService {
     @Transactional
     public AisleResponse update(Long id, UpdateAisleRequest request) {
         Aisle existingAisle = repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Aisle not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Aisle not found with ID: " + id));
+
+        if (!existingAisle.getCode().equals(request.code()) &&
+                repository.existsByCodeAndWarehouseId(request.code(), existingAisle.getWarehouse().getId())) {
+            throw new DuplicateResourceException("Cannot update. The code '" + request.code() + "' is already in use in this warehouse.");
+        }
+
         mapper.updateEntityFromDto(request, existingAisle);
         return mapper.toDto(repository.save(existingAisle));
     }
@@ -46,16 +59,17 @@ public class AisleServiceImpl implements AisleService {
     @Transactional(readOnly = true)
     public AisleResponse getById(Long id) {
         return repository.findById(id).map(mapper::toDto)
-                .orElseThrow(() -> new ResourceNotFoundException("Aisle not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Aisle not found with ID: " + id));
     }
 
     @Override
     @Transactional
     public void delete(Long id) {
-        if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException("Aisle not found with id: " + id);
-        }
-        repository.deleteById(id);
+        Aisle aisle = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Aisle not found with ID: " + id));
+
+        aisle.setActive(false);
+        repository.save(aisle);
     }
 
     @Override

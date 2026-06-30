@@ -16,4 +16,6 @@ public interface AisleRepository extends JpaRepository<Aisle, Long> {
 
     // Retrieves a paginated list of all aisles belonging to a specific warehouse.
     Page<Aisle> findByWarehouseId(Long warehouseId, Pageable pageable);
+
+    boolean existsByCodeAndWarehouseId(String code, Long warehouseId);
 }
