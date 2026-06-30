@@ -4,6 +4,7 @@ import com.example.warehouseinventoryapi.dto.request.CreateReservationRequest;
 import com.example.warehouseinventoryapi.dto.response.ReservationResponse;
 import com.example.warehouseinventoryapi.entity.*;
 import com.example.warehouseinventoryapi.exception.BadRequestException;
+import com.example.warehouseinventoryapi.exception.InsufficientStockException;
 import com.example.warehouseinventoryapi.exception.ResourceNotFoundException;
 import com.example.warehouseinventoryapi.inventory.FifoAllocator;
 import com.example.warehouseinventoryapi.mapper.InventoryMapper;
@@ -58,7 +59,7 @@ public class ReservationServiceImpl implements ReservationService {
 
         int totalAvailableStock = batches.stream().mapToInt(InventoryBatch::getAvailableQuantity).sum();
         if (totalAvailableStock < request.quantity()) {
-            throw new BadRequestException("Insufficient stock. Requested: " + request.quantity() +
+            throw new InsufficientStockException("Insufficient stock. Requested: " + request.quantity() +
                     ", Available: " + totalAvailableStock + " for Product SKU: " + product.getSku());
         }
 

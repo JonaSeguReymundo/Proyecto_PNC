@@ -1,6 +1,8 @@
 package com.example.warehouseinventoryapi.exception;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -58,8 +60,18 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // 5. Handle Validation Errors - @Valid (HTTP 400)
-    // Shows exactly which field failed in the input JSON (e.g., "sku cannot be empty")
+    // 5. Handle Security Authentication Failures (HTTP 401)
+    @ExceptionHandler({UsernameNotFoundException.class, DisabledException.class})
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleSecurityExceptions(Exception ex) {
+        return new ErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                "Unauthorized",
+                ex.getMessage()
+        );
+    }
+
+    // 6. Handle Validation Errors - @Valid (HTTP 400)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleValidationExceptions(MethodArgumentNotValidException ex) {
@@ -79,7 +91,7 @@ public class GlobalExceptionHandler {
         );
     }
 
-    // Generic Server Errors (HTTP 500)
+    // 7. Generic Server Errors (HTTP 500)
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorResponse handleGlobalException(Exception ex) {
