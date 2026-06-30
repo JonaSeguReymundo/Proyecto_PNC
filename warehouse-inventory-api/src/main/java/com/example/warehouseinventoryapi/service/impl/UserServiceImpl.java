@@ -7,6 +7,8 @@ import com.example.warehouseinventoryapi.dto.response.UserResponse;
 import com.example.warehouseinventoryapi.entity.Role;
 import com.example.warehouseinventoryapi.entity.RoleName;
 import com.example.warehouseinventoryapi.entity.User;
+import com.example.warehouseinventoryapi.exception.BadRequestException; // Agregada para reglas de negocio
+import com.example.warehouseinventoryapi.exception.DuplicateResourceException; // Agregada para conflictos de duplicidad
 import com.example.warehouseinventoryapi.exception.ResourceNotFoundException;
 import com.example.warehouseinventoryapi.mapper.PageableMapper;
 import com.example.warehouseinventoryapi.repository.RoleRepository;
@@ -36,7 +38,11 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse create(CreateUserRequest request) {
         if (userRepository.existsByUsername(request.username())) {
-            throw new IllegalArgumentException("Username already exists: " + request.username());
+            throw new DuplicateResourceException("Username '" + request.username() + "' is already registered in the system.");
+        }
+
+        if (request.roles() == null || request.roles().isEmpty()) {
+            throw new BadRequestException("User registration requires at least one assigned authority role.");
         }
 
         Set<Role> roles = resolveRoles(request.roles());
@@ -57,6 +63,10 @@ public class UserServiceImpl implements UserService {
     public UserResponse update(Long id, UpdateUserRequest request) {
         User user = findOrThrow(id);
 
+        if (request.roles() == null || request.roles().isEmpty()) {
+            throw new BadRequestException("Cannot update user. An active account must possess at least one role.");
+        }
+
         user.setFullName(request.fullName());
         user.setRoles(resolveRoles(request.roles()));
         if (request.active() != null) user.setActive(request.active());
@@ -74,7 +84,6 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void delete(Long id) {
         User user = findOrThrow(id);
-        // Soft delete
         user.setActive(false);
         userRepository.save(user);
     }
@@ -87,17 +96,15 @@ public class UserServiceImpl implements UserService {
         return pageableMapper.toPageableResponse(page, content);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
     private User findOrThrow(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("User system account not found with id: " + id));
     }
 
     private Set<Role> resolveRoles(Set<RoleName> roleNames) {
         return roleNames.stream()
                 .map(name -> roleRepository.findByName(name)
-                        .orElseThrow(() -> new ResourceNotFoundException("Role not found: " + name)))
+                        .orElseThrow(() -> new ResourceNotFoundException("Security Role authorization level not found: " + name)))
                 .collect(Collectors.toSet());
     }
 
