@@ -4,13 +4,13 @@ import com.example.warehouseinventoryapi.dto.request.CreateTransferRequest;
 import com.example.warehouseinventoryapi.dto.response.PageableResponse;
 import com.example.warehouseinventoryapi.dto.response.TransferResponse;
 import com.example.warehouseinventoryapi.entity.Transfer;
-import com.example.warehouseinventoryapi.exception.BadRequestException; // Added for business rules
+import com.example.warehouseinventoryapi.exception.BadRequestException;
 import com.example.warehouseinventoryapi.exception.ResourceNotFoundException;
 import com.example.warehouseinventoryapi.mapper.PageableMapper;
 import com.example.warehouseinventoryapi.mapper.TransferMapper;
-import com.example.warehouseinventoryapi.repository.ProductRepository;   // Added for verification
+import com.example.warehouseinventoryapi.repository.ProductRepository;
 import com.example.warehouseinventoryapi.repository.TransferRepository;
-import com.example.warehouseinventoryapi.repository.WarehouseRepository; // Added for verification
+import com.example.warehouseinventoryapi.repository.WarehouseRepository;
 import com.example.warehouseinventoryapi.service.TransferService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

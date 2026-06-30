@@ -8,9 +8,9 @@ import com.example.warehouseinventoryapi.exception.DuplicateResourceException;
 import com.example.warehouseinventoryapi.exception.ResourceNotFoundException;
 import com.example.warehouseinventoryapi.mapper.PageableMapper;
 import com.example.warehouseinventoryapi.mapper.ProductLocationMapper;
-import com.example.warehouseinventoryapi.repository.LocationRepository; // Added for parent validation
+import com.example.warehouseinventoryapi.repository.LocationRepository;
 import com.example.warehouseinventoryapi.repository.ProductLocationRepository;
-import com.example.warehouseinventoryapi.repository.ProductRepository;  // Added for parent validation
+import com.example.warehouseinventoryapi.repository.ProductRepository;
 import com.example.warehouseinventoryapi.service.ProductLocationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

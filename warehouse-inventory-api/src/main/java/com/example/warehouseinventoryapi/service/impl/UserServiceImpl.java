@@ -7,8 +7,8 @@ import com.example.warehouseinventoryapi.dto.response.UserResponse;
 import com.example.warehouseinventoryapi.entity.Role;
 import com.example.warehouseinventoryapi.entity.RoleName;
 import com.example.warehouseinventoryapi.entity.User;
-import com.example.warehouseinventoryapi.exception.BadRequestException; // Agregada para reglas de negocio
-import com.example.warehouseinventoryapi.exception.DuplicateResourceException; // Agregada para conflictos de duplicidad
+import com.example.warehouseinventoryapi.exception.BadRequestException;
+import com.example.warehouseinventoryapi.exception.DuplicateResourceException;
 import com.example.warehouseinventoryapi.exception.ResourceNotFoundException;
 import com.example.warehouseinventoryapi.mapper.PageableMapper;
 import com.example.warehouseinventoryapi.repository.RoleRepository;

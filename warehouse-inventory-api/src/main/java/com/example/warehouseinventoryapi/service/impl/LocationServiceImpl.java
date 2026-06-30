@@ -9,7 +9,7 @@ import com.example.warehouseinventoryapi.exception.DuplicateResourceException;
 import com.example.warehouseinventoryapi.exception.ResourceNotFoundException;
 import com.example.warehouseinventoryapi.mapper.LocationMapper;
 import com.example.warehouseinventoryapi.mapper.PageableMapper;
-import com.example.warehouseinventoryapi.repository.LevelRepository; // Added for parent validation
+import com.example.warehouseinventoryapi.repository.LevelRepository;
 import com.example.warehouseinventoryapi.repository.LocationRepository;
 import com.example.warehouseinventoryapi.service.LocationService;
 import lombok.RequiredArgsConstructor;
