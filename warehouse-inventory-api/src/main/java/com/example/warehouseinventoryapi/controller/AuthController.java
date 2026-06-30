@@ -19,21 +19,12 @@ public class AuthController {
 
     private final AuthService authService;
 
-    /**
-     * POST /api/auth/login
-     * Devuelve access token + refresh token.
-     * HTTP 200 OK (no 201 porque no se crea un recurso, se inicia una sesión).
-     */
     @PostMapping("/login")
     @Operation(summary = "Iniciar sesión", description = "Devuelve access token y refresh token")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    /**
-     * POST /api/auth/refresh
-     * Recibe el refresh token y emite un nuevo par (rotación stateless).
-     */
     @PostMapping("/refresh")
     @Operation(summary = "Rotar refresh token", description = "Emite un nuevo par de tokens")
     public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {

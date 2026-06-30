@@ -46,9 +46,6 @@ public class UserController {
         return service.getById(id);
     }
 
-    /**
-     * DELETE hace soft delete (activo = false).
-     */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMINISTRADOR')")
