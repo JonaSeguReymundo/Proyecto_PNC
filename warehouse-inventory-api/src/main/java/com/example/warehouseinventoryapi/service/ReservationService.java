@@ -9,7 +9,7 @@ public interface ReservationService {
 
     ReservationResponse create(CreateReservationRequest request);
 
-    ReservationResponse confirm(Long id);
+    ReservationResponse confirm(Long id, String reference);
 
     ReservationResponse release(Long id);
 

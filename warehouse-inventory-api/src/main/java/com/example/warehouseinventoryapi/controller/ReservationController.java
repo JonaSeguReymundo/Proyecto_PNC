@@ -29,8 +29,8 @@ public class ReservationController {
 
     @PostMapping("/{id}/confirm")
     @Operation(summary = "Confirmar una reserva activa (el stock sale definitivamente)")
-    public ReservationResponse confirm(@PathVariable Long id) {
-        return service.confirm(id);
+    public ReservationResponse confirm(@PathVariable Long id, @RequestParam String reference) {
+        return service.confirm(id, reference);
     }
 
     @PostMapping("/{id}/release")

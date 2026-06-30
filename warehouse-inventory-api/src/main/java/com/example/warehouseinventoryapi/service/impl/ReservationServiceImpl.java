@@ -95,7 +95,7 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional
-    public ReservationResponse confirm(Long id) {
+    public ReservationResponse confirm(Long id, String reference) {
         StockReservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Reservation not found with id: " + id));
@@ -106,6 +106,7 @@ public class ReservationServiceImpl implements ReservationService {
         }
 
         reservation.setStatus(ReservationStatus.CONFIRMED);
+        reservation.setReference(reference);
         StockReservation saved = reservationRepository.save(reservation);
 
         String username = currentUsername();
@@ -116,7 +117,7 @@ public class ReservationServiceImpl implements ReservationService {
                 .quantity(reservation.getQuantity())
                 .performedBy(username)
                 .createdAt(LocalDateTime.now())
-                .reference("Confirmacion de reserva #" + reservation.getId())
+                .reference(reference)
                 .build());
 
         auditLogService.record(username, "CONFIRM_RESERVATION", "stock_reservations",
