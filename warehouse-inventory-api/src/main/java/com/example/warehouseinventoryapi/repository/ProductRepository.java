@@ -20,4 +20,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // Used for user-facing catalogs or active product listings with pagination.
     Page<Product> findAllByActiveTrue(Pageable pageable);
+
+    boolean existsBySku(String sku);
 }

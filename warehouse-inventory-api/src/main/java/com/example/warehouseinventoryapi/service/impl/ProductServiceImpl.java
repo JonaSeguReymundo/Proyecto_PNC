@@ -5,6 +5,7 @@ import com.example.warehouseinventoryapi.dto.request.UpdateProductRequest;
 import com.example.warehouseinventoryapi.dto.response.PageableResponse;
 import com.example.warehouseinventoryapi.dto.response.ProductResponse;
 import com.example.warehouseinventoryapi.entity.Product;
+import com.example.warehouseinventoryapi.exception.DuplicateResourceException;
 import com.example.warehouseinventoryapi.exception.ResourceNotFoundException;
 import com.example.warehouseinventoryapi.mapper.PageableMapper;
 import com.example.warehouseinventoryapi.mapper.ProductMapper;
@@ -23,13 +24,19 @@ import java.util.List;
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository repository;
-    private final ProductMapper mapper;
-    private final PageableMapper pageableMapper;
+    private final ProductMapper     mapper;
+    private final PageableMapper    pageableMapper;
 
     @Override
     @Transactional
     public ProductResponse create(CreateProductRequest request) {
+        if (repository.existsBySku(request.sku())) {
+            throw new DuplicateResourceException("Product with SKU '" + request.sku() + "' already exists in the system.");
+        }
+
         Product product = mapper.toEntityCreate(request);
+        product.setActive(true);
+
         return mapper.toDto(repository.save(product));
     }
 
@@ -38,6 +45,7 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse update(Long id, UpdateProductRequest request) {
         Product existingProduct = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+
         mapper.updateEntityFromDto(request, existingProduct);
         return mapper.toDto(repository.save(existingProduct));
     }
@@ -52,10 +60,11 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public void delete(Long id) {
-        if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException("Product not found with id: " + id);
-        }
-        repository.deleteById(id);
+        Product product = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+
+        product.setActive(false);
+        repository.save(product);
     }
 
     @Override

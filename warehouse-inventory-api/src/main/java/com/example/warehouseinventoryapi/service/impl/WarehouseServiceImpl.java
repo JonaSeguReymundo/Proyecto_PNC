@@ -5,6 +5,7 @@ import com.example.warehouseinventoryapi.dto.request.UpdateWarehouseRequest;
 import com.example.warehouseinventoryapi.dto.response.PageableResponse;
 import com.example.warehouseinventoryapi.dto.response.WarehouseResponse;
 import com.example.warehouseinventoryapi.entity.Warehouse;
+import com.example.warehouseinventoryapi.exception.DuplicateResourceException;
 import com.example.warehouseinventoryapi.exception.ResourceNotFoundException;
 import com.example.warehouseinventoryapi.mapper.PageableMapper;
 import com.example.warehouseinventoryapi.mapper.WarehouseMapper;
@@ -23,13 +24,20 @@ import java.util.List;
 public class WarehouseServiceImpl implements WarehouseService {
 
     private final WarehouseRepository repository;
-    private final WarehouseMapper mapper;
-    private final PageableMapper pageableMapper;
+    private final WarehouseMapper     mapper;
+    private final PageableMapper      pageableMapper;
 
     @Override
     @Transactional
     public WarehouseResponse create(CreateWarehouseRequest request) {
+        if (repository.existsByName(request.name())) {
+            throw new DuplicateResourceException("Warehouse with name '" + request.name() + "' already exists in the system.");
+        }
+
         Warehouse warehouse = mapper.toEntityCreate(request);
+
+        warehouse.setActive(true);
+
         Warehouse savedWarehouse = repository.save(warehouse);
         return mapper.toDto(savedWarehouse);
     }
@@ -39,6 +47,10 @@ public class WarehouseServiceImpl implements WarehouseService {
     public WarehouseResponse update(Long id, UpdateWarehouseRequest request) {
         Warehouse existingWarehouse = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found with id: " + id));
+
+        if (!existingWarehouse.getName().equalsIgnoreCase(request.name()) && repository.existsByName(request.name())) {
+            throw new DuplicateResourceException("Cannot update warehouse. Name '" + request.name() + "' is already assigned to another warehouse unit.");
+        }
 
         mapper.updateEntityFromDto(request, existingWarehouse);
 
@@ -57,19 +69,18 @@ public class WarehouseServiceImpl implements WarehouseService {
     @Override
     @Transactional
     public void delete(Long id) {
-        if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException("Warehouse not found with id: " + id);
-        }
-        repository.deleteById(id);
+        Warehouse warehouse = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found with id: " + id));
+
+        warehouse.setActive(false);
+        repository.save(warehouse);
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageableResponse<WarehouseResponse> getAllActive(Pageable pageable) {
         Page<Warehouse> warehousePage = repository.findAllByActiveTrue(pageable);
-
         List<WarehouseResponse> dtoList = mapper.toDtoList(warehousePage.getContent());
-
         return pageableMapper.toPageableResponse(warehousePage, dtoList);
     }
 }

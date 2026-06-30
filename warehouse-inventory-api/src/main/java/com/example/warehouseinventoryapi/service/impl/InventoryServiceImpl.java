@@ -8,6 +8,7 @@ import com.example.warehouseinventoryapi.dto.response.PageableResponse;
 import com.example.warehouseinventoryapi.dto.response.MovementResponse;
 import com.example.warehouseinventoryapi.dto.response.StockSummaryResponse;
 import com.example.warehouseinventoryapi.entity.*;
+import com.example.warehouseinventoryapi.exception.BadRequestException;
 import com.example.warehouseinventoryapi.exception.ResourceNotFoundException;
 import com.example.warehouseinventoryapi.mapper.InventoryMapper;
 import com.example.warehouseinventoryapi.mapper.PageableMapper;
@@ -21,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,17 +45,24 @@ public class InventoryServiceImpl implements InventoryService {
     public BatchResponse registerPurchaseEntry(PurchaseEntryRequest request) {
         Product product = productRepository.findById(request.productId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Product not found with id: " + request.productId()));
+                        "Product not found with ID: " + request.productId()));
 
         Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Warehouse not found with id: " + request.warehouseId()));
+                        "Warehouse not found with ID: " + request.warehouseId()));
 
-        // Validacion de coherencia de fechas (si ambas vienen).
+        // —— INPUT INTEGRITY VALIDATIONS ——
+        if (request.quantity() <= 0) {
+            throw new BadRequestException("The entered quantity must be greater than zero.");
+        }
+
+        if (request.unitCost() == null || request.unitCost().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("The unit cost must be greater than zero.");
+        }
+
         if (request.manufacturingDate() != null && request.expirationDate() != null
                 && request.expirationDate().isBefore(request.manufacturingDate())) {
-            throw new IllegalArgumentException(
-                    "Expiration date cannot be before manufacturing date");
+            throw new BadRequestException("The expiration date cannot be earlier than the manufacturing date.");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -88,7 +97,7 @@ public class InventoryServiceImpl implements InventoryService {
         movementRepository.save(movement);
 
         auditLogService.record(username, "ENTRY_PURCHASE", "inventory_batches",
-                "Entrada de " + request.quantity() + " unidades del producto " + product.getSku());
+                "Entry of " + request.quantity() + " units for product " + product.getSku());
 
         return mapper.toBatchDto(savedBatch);
     }
@@ -98,7 +107,11 @@ public class InventoryServiceImpl implements InventoryService {
     public StockSummaryResponse getStock(Long productId, Long warehouseId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Product not found with id: " + productId));
+                        "Product not found with ID: " + productId));
+
+        if (!warehouseRepository.existsById(warehouseId)) {
+            throw new ResourceNotFoundException("Warehouse not found with ID: " + warehouseId);
+        }
 
         List<InventoryBatch> batches =
                 batchRepository.findByProductIdAndWarehouseIdOrderByReceivedAtAsc(productId, warehouseId);
@@ -119,6 +132,13 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional(readOnly = true)
     public List<BatchResponse> getBatches(Long productId, Long warehouseId) {
+        if (!productRepository.existsById(productId)) {
+            throw new ResourceNotFoundException("Product not found with ID: " + productId);
+        }
+        if (!warehouseRepository.existsById(warehouseId)) {
+            throw new ResourceNotFoundException("Warehouse not found with ID: " + warehouseId);
+        }
+
         List<InventoryBatch> batches =
                 batchRepository.findByProductIdAndWarehouseIdOrderByReceivedAtAsc(productId, warehouseId);
         return mapper.toBatchDtoList(batches);
@@ -127,6 +147,10 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional(readOnly = true)
     public PageableResponse<MovementResponse> getMovements(Long productId, Pageable pageable) {
+        if (!productRepository.existsById(productId)) {
+            throw new ResourceNotFoundException("Product not found with ID: " + productId);
+        }
+
         Page<InventoryMovement> page =
                 movementRepository.findByProductIdOrderByCreatedAtDesc(productId, pageable);
         List<MovementResponse> dtoList = mapper.toMovementDtoList(page.getContent());
@@ -138,15 +162,28 @@ public class InventoryServiceImpl implements InventoryService {
     public List<MovementResponse> registerOrderExit(OrderExitRequest request) {
         Product product = productRepository.findById(request.productId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Product not found with id: " + request.productId()));
+                        "Product not found with ID: " + request.productId()));
 
         Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Warehouse not found with id: " + request.warehouseId()));
+                        "Warehouse not found with ID: " + request.warehouseId()));
+
+        if (request.quantity() <= 0) {
+            throw new BadRequestException("The requested quantity for exit must be greater than zero.");
+        }
 
         List<InventoryBatch> batches = batchRepository
                 .findByProductIdAndWarehouseIdAndAvailableQuantityGreaterThanOrderByReceivedAtAsc(
                         request.productId(), request.warehouseId(), 0);
+
+        int totalStockDisponible = batches.stream()
+                .mapToInt(InventoryBatch::getAvailableQuantity)
+                .sum();
+
+        if (totalStockDisponible < request.quantity()) {
+            throw new BadRequestException("Insufficient stock for product '" + product.getSku() +
+                    "' in this warehouse. Available stock: " + totalStockDisponible + " units. Requested: " + request.quantity() + " units.");
+        }
 
         List<FifoAllocator.Allocation> allocations =
                 fifoAllocator.allocate(batches, request.quantity());
@@ -177,7 +214,7 @@ public class InventoryServiceImpl implements InventoryService {
         }
 
         auditLogService.record(username, "EXIT_ORDER", "inventory_batches",
-                "Salida FIFO de " + request.quantity() + " unidades del producto " + product.getSku());
+                "FIFO exit of " + request.quantity() + " units for product " + product.getSku());
 
         return mapper.toMovementDtoList(movements);
     }

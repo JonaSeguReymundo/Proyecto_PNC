@@ -6,12 +6,14 @@ import com.example.warehouseinventoryapi.dto.response.RopResponse;
 import com.example.warehouseinventoryapi.dto.response.StockAlertResponse;
 import com.example.warehouseinventoryapi.entity.InventoryBatch;
 import com.example.warehouseinventoryapi.entity.Product;
+import com.example.warehouseinventoryapi.exception.BadRequestException;
 import com.example.warehouseinventoryapi.exception.ResourceNotFoundException;
 import com.example.warehouseinventoryapi.inventory.AbcClassifier;
 import com.example.warehouseinventoryapi.inventory.CostingCalculator;
 import com.example.warehouseinventoryapi.inventory.RopCalculator;
 import com.example.warehouseinventoryapi.repository.InventoryBatchRepository;
 import com.example.warehouseinventoryapi.repository.ProductRepository;
+import com.example.warehouseinventoryapi.repository.WarehouseRepository;
 import com.example.warehouseinventoryapi.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,15 +27,20 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReportServiceImpl implements ReportService {
 
-    private final ProductRepository productRepository;
-    private final InventoryBatchRepository batchRepository;
-    private final CostingCalculator costingCalculator;
-    private final RopCalculator ropCalculator;
-    private final AbcClassifier abcClassifier;
+    private final ProductRepository        productRepository;
+    private final InventoryBatchRepository  batchRepository;
+    private final WarehouseRepository       warehouseRepository;
+    private final CostingCalculator         costingCalculator;
+    private final RopCalculator             ropCalculator;
+    private final AbcClassifier             abcClassifier;
 
     @Override
     @Transactional(readOnly = true)
     public List<StockAlertResponse> getStockAlerts(Long warehouseId) {
+        if (!warehouseRepository.existsById(warehouseId)) {
+            throw new ResourceNotFoundException("Warehouse not found with id: " + warehouseId);
+        }
+
         List<StockAlertResponse> alerts = new ArrayList<>();
 
         for (Product product : productRepository.findAllByActiveTrue()) {
@@ -57,9 +64,12 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional(readOnly = true)
     public ProductCostResponse getProductCost(Long productId, Long warehouseId) {
+        if (!warehouseRepository.existsById(warehouseId)) {
+            throw new ResourceNotFoundException("Warehouse not found with id: " + warehouseId);
+        }
+
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Product not found with id: " + productId));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
         List<InventoryBatch> batches = batchRepository
                 .findByProductIdAndWarehouseIdOrderByReceivedAtAsc(productId, warehouseId);
@@ -75,9 +85,22 @@ public class ReportServiceImpl implements ReportService {
     @Transactional(readOnly = true)
     public RopResponse getReorderPoint(Long productId, Long warehouseId,
                                        double averageDailyDemand, int leadTimeDays, int safetyStock) {
+        if (averageDailyDemand < 0) {
+            throw new BadRequestException("Average daily demand cannot be negative: " + averageDailyDemand);
+        }
+        if (leadTimeDays < 0) {
+            throw new BadRequestException("Lead time days cannot be negative: " + leadTimeDays);
+        }
+        if (safetyStock < 0) {
+            throw new BadRequestException("Safety stock cannot be negative: " + safetyStock);
+        }
+
+        if (!warehouseRepository.existsById(warehouseId)) {
+            throw new ResourceNotFoundException("Warehouse not found with id: " + warehouseId);
+        }
+
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Product not found with id: " + productId));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
         int currentStock = currentStock(productId, warehouseId);
         int rop = ropCalculator.reorderPoint(averageDailyDemand, leadTimeDays, safetyStock);
@@ -90,6 +113,10 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional(readOnly = true)
     public List<AbcReportItemResponse> getAbcReport(Long warehouseId) {
+        if (!warehouseRepository.existsById(warehouseId)) {
+            throw new ResourceNotFoundException("Warehouse not found with id: " + warehouseId);
+        }
+
         List<AbcClassifier.Item> items = new ArrayList<>();
 
         for (Product product : productRepository.findAllByActiveTrue()) {
@@ -97,6 +124,10 @@ public class ReportServiceImpl implements ReportService {
                     .findByProductIdAndWarehouseIdOrderByReceivedAtAsc(product.getId(), warehouseId);
             BigDecimal value = costingCalculator.totalInventoryValue(batches);
             items.add(new AbcClassifier.Item(product.getId(), product.getSku(), value));
+        }
+
+        if (items.isEmpty()) {
+            return new ArrayList<>();
         }
 
         List<AbcClassifier.Classified> classified = abcClassifier.classify(items);

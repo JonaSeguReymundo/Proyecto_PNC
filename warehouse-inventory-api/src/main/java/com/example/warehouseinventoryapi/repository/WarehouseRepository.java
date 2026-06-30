@@ -16,4 +16,6 @@ public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
 
     // Retrieves a paginated list of all active warehouses.
     Page<Warehouse> findAllByActiveTrue(Pageable pageable);
+
+    boolean existsByName(String name);
 }

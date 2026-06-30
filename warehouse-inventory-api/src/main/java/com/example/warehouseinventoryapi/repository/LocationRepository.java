@@ -26,4 +26,6 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
 
     // Retrieves a paginated list of all locations belonging to a specific level.
     Page<Location> findByLevelId(Long levelId, Pageable pageable);
+
+    boolean existsByCode(String code);
 }

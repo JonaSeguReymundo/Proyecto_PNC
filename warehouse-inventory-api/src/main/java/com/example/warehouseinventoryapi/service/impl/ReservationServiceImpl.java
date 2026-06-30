@@ -3,6 +3,7 @@ package com.example.warehouseinventoryapi.service.impl;
 import com.example.warehouseinventoryapi.dto.request.CreateReservationRequest;
 import com.example.warehouseinventoryapi.dto.response.ReservationResponse;
 import com.example.warehouseinventoryapi.entity.*;
+import com.example.warehouseinventoryapi.exception.BadRequestException;
 import com.example.warehouseinventoryapi.exception.ResourceNotFoundException;
 import com.example.warehouseinventoryapi.inventory.FifoAllocator;
 import com.example.warehouseinventoryapi.mapper.InventoryMapper;
@@ -25,7 +26,6 @@ import java.util.List;
 public class ReservationServiceImpl implements ReservationService {
 
     private static final Logger log = LoggerFactory.getLogger(ReservationServiceImpl.class);
-
     private static final int RESERVATION_MINUTES = 15;
 
     private final StockReservationRepository reservationRepository;
@@ -40,6 +40,10 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     @Transactional
     public ReservationResponse create(CreateReservationRequest request) {
+        if (request.quantity() <= 0) {
+            throw new BadRequestException("Reservation quantity must be greater than zero.");
+        }
+
         Product product = productRepository.findById(request.productId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Product not found with id: " + request.productId()));
@@ -51,6 +55,12 @@ public class ReservationServiceImpl implements ReservationService {
         List<InventoryBatch> batches = batchRepository
                 .findByProductIdAndWarehouseIdAndAvailableQuantityGreaterThanOrderByReceivedAtAsc(
                         request.productId(), request.warehouseId(), 0);
+
+        int totalAvailableStock = batches.stream().mapToInt(InventoryBatch::getAvailableQuantity).sum();
+        if (totalAvailableStock < request.quantity()) {
+            throw new BadRequestException("Insufficient stock. Requested: " + request.quantity() +
+                    ", Available: " + totalAvailableStock + " for Product SKU: " + product.getSku());
+        }
 
         List<FifoAllocator.Allocation> allocations =
                 fifoAllocator.allocate(batches, request.quantity());
@@ -101,7 +111,7 @@ public class ReservationServiceImpl implements ReservationService {
                         "Reservation not found with id: " + id));
 
         if (reservation.getStatus() != ReservationStatus.ACTIVE) {
-            throw new IllegalArgumentException(
+            throw new BadRequestException(
                     "Only ACTIVE reservations can be confirmed. Current status: " + reservation.getStatus());
         }
 
@@ -134,7 +144,7 @@ public class ReservationServiceImpl implements ReservationService {
                         "Reservation not found with id: " + id));
 
         if (reservation.getStatus() != ReservationStatus.ACTIVE) {
-            throw new IllegalArgumentException(
+            throw new BadRequestException(
                     "Only ACTIVE reservations can be released. Current status: " + reservation.getStatus());
         }
 
