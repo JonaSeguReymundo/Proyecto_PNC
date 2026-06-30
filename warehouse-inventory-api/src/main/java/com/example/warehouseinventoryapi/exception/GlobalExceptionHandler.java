@@ -1,92 +1,92 @@
 package com.example.warehouseinventoryapi.exception;
 
-import com.example.warehouseinventoryapi.dto.response.ApiErrorResponse;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.time.LocalDate;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    // 1. Handle Resource Not Found (HTTP 404)
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleResourceNotFound(ResourceNotFoundException e) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, e.getMessage());
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiErrorResponse> handleValidationErrors(MethodArgumentNotValidException e) {
-        List<String> errors = e.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(FieldError::getDefaultMessage)
-                .toList();
-
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, errors);
-    }
-
-    /** Credenciales incorrectas en el login → 401 */
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ApiErrorResponse> handleBadCredentials(BadCredentialsException e) {
-        return buildErrorResponse(HttpStatus.UNAUTHORIZED, "Invalid username or password");
-    }
-
-    /** Usuario desactivado → 401 */
-    @ExceptionHandler(DisabledException.class)
-    public ResponseEntity<ApiErrorResponse> handleDisabled(DisabledException e) {
-        return buildErrorResponse(HttpStatus.UNAUTHORIZED, "User account is disabled");
-    }
-
-    /** Token JWT inválido o expirado → 401 */
-    @ExceptionHandler(JwtException.class)
-    public ResponseEntity<ApiErrorResponse> handleJwt(JwtException e) {
-        return buildErrorResponse(HttpStatus.UNAUTHORIZED, "JWT error: " + e.getMessage());
-    }
-
-    /** Sin permisos para el recurso → 403 */
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiErrorResponse> handleForbidden(AccessDeniedException e) {
-        return buildErrorResponse(HttpStatus.FORBIDDEN, "Access denied: insufficient permissions");
-    }
-
-    /** Argumentos ilegales (ej: username duplicado) → 400 */
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiErrorResponse> handleIllegalArg(IllegalArgumentException e) {
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
-    }
-
-    /** Catch-all → 500 */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiErrorResponse> handleGeneric(Exception e) {
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
-    }
-
-    private ResponseEntity<ApiErrorResponse> buildErrorResponse(HttpStatus status, Object message) {
-        String uri = tryGetUri();
-        return ResponseEntity.status(status).body(
-                ApiErrorResponse.builder()
-                        .status(status.value())
-                        .message(message)
-                        .time(LocalDate.now())
-                        .uri(uri)
-                        .build()
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleResourceNotFound(ResourceNotFoundException ex) {
+        return new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                "Resource Not Found",
+                ex.getMessage()
         );
     }
-    private String tryGetUri() {
-        try {
-            return ServletUriComponentsBuilder.fromCurrentRequestUri().build().getPath();
-        } catch (Exception e) {
-            return "unknown";
-        }
+
+    // 2. Handle Conflict due to Duplicate Data (HTTP 409)
+    @ExceptionHandler(DuplicateResourceException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleDuplicateResource(DuplicateResourceException ex) {
+        return new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                "Conflict",
+                ex.getMessage()
+        );
+    }
+
+    // 3. Handle Insufficient Stock (HTTP 400)
+    @ExceptionHandler(InsufficientStockException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInsufficientStock(InsufficientStockException ex) {
+        return new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Insufficient Stock",
+                ex.getMessage()
+        );
+    }
+
+    // 4. Handle General Bad Request due to incorrect business logic (HTTP 400)
+    @ExceptionHandler(BadRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleBadRequest(BadRequestException ex) {
+        return new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage()
+        );
+    }
+
+    // 5. Handle Validation Errors - @Valid (HTTP 400)
+    // Shows exactly which field failed in the input JSON (e.g., "sku cannot be empty")
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach((error) -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
+
+        return new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Validation Failed",
+                "The input data does not comply with the required validation constraints.",
+                LocalDateTime.now(),
+                errors
+        );
+    }
+
+    // Generic Server Errors (HTTP 500)
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ErrorResponse handleGlobalException(Exception ex) {
+        return new ErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Internal Server Error",
+                "An unexpected error occurred in the system: " + ex.getMessage()
+        );
     }
 }
