@@ -5,9 +5,11 @@ import com.example.warehouseinventoryapi.dto.request.UpdateLocationRequest;
 import com.example.warehouseinventoryapi.dto.response.LocationResponse;
 import com.example.warehouseinventoryapi.dto.response.PageableResponse;
 import com.example.warehouseinventoryapi.entity.Location;
+import com.example.warehouseinventoryapi.exception.DuplicateResourceException;
 import com.example.warehouseinventoryapi.exception.ResourceNotFoundException;
 import com.example.warehouseinventoryapi.mapper.LocationMapper;
 import com.example.warehouseinventoryapi.mapper.PageableMapper;
+import com.example.warehouseinventoryapi.repository.LevelRepository; // Added for parent validation
 import com.example.warehouseinventoryapi.repository.LocationRepository;
 import com.example.warehouseinventoryapi.service.LocationService;
 import lombok.RequiredArgsConstructor;
@@ -23,13 +25,25 @@ import java.util.List;
 public class LocationServiceImpl implements LocationService {
 
     private final LocationRepository repository;
-    private final LocationMapper mapper;
-    private final PageableMapper pageableMapper;
+    private final LevelRepository    levelRepository;
+    private final LocationMapper     mapper;
+    private final PageableMapper     pageableMapper;
 
     @Override
     @Transactional
     public LocationResponse create(CreateLocationRequest request) {
+        if (!levelRepository.existsById(request.levelId())) {
+            throw new ResourceNotFoundException("Level not found with id: " + request.levelId());
+        }
+
+        if (repository.existsByCode(request.code())) {
+            throw new DuplicateResourceException("Location with code '" + request.code() + "' already exists in the system.");
+        }
+
         Location location = mapper.toEntityCreate(request);
+
+        location.setOccupied(false);
+
         return mapper.toDto(repository.save(location));
     }
 
@@ -38,6 +52,11 @@ public class LocationServiceImpl implements LocationService {
     public LocationResponse update(Long id, UpdateLocationRequest request) {
         Location existingLocation = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Location not found with id: " + id));
+
+        if (!existingLocation.getCode().equals(request.code()) && repository.existsByCode(request.code())) {
+            throw new DuplicateResourceException("Cannot update. Location code '" + request.code() + "' is already in use.");
+        }
+
         mapper.updateEntityFromDto(request, existingLocation);
         return mapper.toDto(repository.save(existingLocation));
     }
@@ -52,10 +71,10 @@ public class LocationServiceImpl implements LocationService {
     @Override
     @Transactional
     public void delete(Long id) {
-        if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException("Location not found with id: " + id);
-        }
-        repository.deleteById(id);
+        Location location = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Location not found with id: " + id));
+
+        repository.delete(location);
     }
 
     @Override
@@ -76,6 +95,10 @@ public class LocationServiceImpl implements LocationService {
     @Override
     @Transactional(readOnly = true)
     public PageableResponse<LocationResponse> getByLevelId(Long levelId, Pageable pageable) {
+        if (!levelRepository.existsById(levelId)) {
+            throw new ResourceNotFoundException("Level not found with id: " + levelId);
+        }
+
         Page<Location> pageResult = repository.findByLevelId(levelId, pageable);
         List<LocationResponse> dtoList = mapper.toDtoList(pageResult.getContent());
         return pageableMapper.toPageableResponse(pageResult, dtoList);
