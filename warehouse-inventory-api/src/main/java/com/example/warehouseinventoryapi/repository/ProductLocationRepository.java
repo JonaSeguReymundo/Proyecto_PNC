@@ -26,4 +26,6 @@ public interface ProductLocationRepository extends JpaRepository<ProductLocation
 
     // Retrieves all products currently stored in a specific location with pagination.
     Page<ProductLocation> findByLocationId(Long locationId, Pageable pageable);
+
+    boolean existsByProductIdAndLocationId(Long productId, Long locationId);
 }
