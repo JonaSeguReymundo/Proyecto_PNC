@@ -3,6 +3,8 @@ package com.example.warehouseinventoryapi.service.impl;
 import com.example.warehouseinventoryapi.dto.response.AuditLogResponse;
 import com.example.warehouseinventoryapi.dto.response.PageableResponse;
 import com.example.warehouseinventoryapi.entity.AuditLog;
+import com.example.warehouseinventoryapi.exception.BadRequestException;
+import com.example.warehouseinventoryapi.exception.ResourceNotFoundException;
 import com.example.warehouseinventoryapi.mapper.PageableMapper;
 import com.example.warehouseinventoryapi.repository.AuditLogRepository;
 import com.example.warehouseinventoryapi.service.AuditLogService;
@@ -22,14 +24,19 @@ public class AuditLogServiceImpl implements AuditLogService {
     private final AuditLogRepository repository;
     private final PageableMapper     pageableMapper;
 
-    /**
-     * Guarda un registro de auditoría.
-     * Usa REQUIRES_NEW para que el log siempre se guarde
-     * aunque la transacción principal falle (ej: para registrar intentos fallidos).
-     */
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(String username, String action, String affectedTable, String detail) {
+        if (username == null || username.isBlank()) {
+            throw new BadRequestException("Username is required to record the audit log.");
+        }
+        if (action == null || action.isBlank()) {
+            throw new BadRequestException("Action is required to record the audit log.");
+        }
+        if (affectedTable == null || affectedTable.isBlank()) {
+            throw new BadRequestException("Affected table is required to record the audit log.");
+        }
+
         repository.save(AuditLog.builder()
                 .username(username)
                 .action(action)
@@ -42,20 +49,40 @@ public class AuditLogServiceImpl implements AuditLogService {
     @Transactional(readOnly = true)
     public PageableResponse<AuditLogResponse> getAll(Pageable pageable) {
         Page<AuditLog> page = repository.findAll(pageable);
+
+        if (page.isEmpty()) {
+            throw new ResourceNotFoundException("No audit logs found in the system.");
+        }
         return toPageable(page);
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageableResponse<AuditLogResponse> getByUsername(String username, Pageable pageable) {
+        if (username == null || username.isBlank()) {
+            throw new BadRequestException("Username for the search cannot be empty.");
+        }
+
         Page<AuditLog> page = repository.findByUsername(username, pageable);
+
+        if (page.isEmpty()) {
+            throw new ResourceNotFoundException("No audit logs found for user: " + username);
+        }
         return toPageable(page);
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageableResponse<AuditLogResponse> getByTable(String table, Pageable pageable) {
+        if (table == null || table.isBlank()) {
+            throw new BadRequestException("Table name for the search cannot be empty.");
+        }
+
         Page<AuditLog> page = repository.findByAffectedTable(table, pageable);
+
+        if (page.isEmpty()) {
+            throw new ResourceNotFoundException("No audit logs found for table: " + table);
+        }
         return toPageable(page);
     }
 
