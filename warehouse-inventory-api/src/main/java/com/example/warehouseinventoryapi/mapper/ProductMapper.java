@@ -1,0 +1,77 @@
+package com.example.warehouseinventoryapi.mapper;
+
+import com.example.warehouseinventoryapi.dto.request.CreateProductRequest;
+import com.example.warehouseinventoryapi.dto.request.UpdateProductRequest;
+import com.example.warehouseinventoryapi.dto.response.AisleResponse;
+import com.example.warehouseinventoryapi.dto.response.ProductResponse;
+import com.example.warehouseinventoryapi.entity.Aisle;
+import com.example.warehouseinventoryapi.entity.Product;
+import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Component;
+import java.util.List;
+
+@Component
+public class ProductMapper {
+
+    public Product toEntityCreate(CreateProductRequest request) {
+        return Product.builder()
+                .sku(request.sku())
+                .name(request.name())
+                .description(request.description())
+                .weight(request.weight())
+                .length(request.length())
+                .width(request.width())
+                .height(request.height())
+                .minimumStock(request.minimumStock())
+                .active(true)
+                .build();
+    }
+
+    public Product toEntityUpdate(UpdateProductRequest request, Long id) {
+        return Product.builder()
+                .id(id)
+                .name(request.name())
+                .description(request.description())
+                .weight(request.weight())
+                .length(request.length())
+                .width(request.width())
+                .height(request.height())
+                .minimumStock(request.minimumStock())
+                .active(request.active())
+                .build();
+    }
+
+    public ProductResponse toDto(Product product) {
+        return new ProductResponse(
+                product.getId(),
+                product.getSku(),
+                product.getName(),
+                product.getDescription(),
+                product.getWeight(),
+                product.getLength(),
+                product.getWidth(),
+                product.getHeight(),
+                product.getMinimumStock(),
+                product.getActive()
+        );
+    }
+
+    public List<ProductResponse> toDtoList(List<Product> products) {
+        return products.stream().map(this::toDto).toList();
+    }
+
+    public void updateEntityFromDto(UpdateProductRequest request, Product product) {
+        if (request.name() != null) product.setName(request.name());
+        if (request.description() != null) product.setDescription(request.description());
+        if (request.weight() != null) product.setWeight(request.weight());
+        if (request.length() != null) product.setLength(request.length());
+        if (request.width() != null) product.setWidth(request.width());
+        if (request.height() != null) product.setHeight(request.height());
+        if (request.minimumStock() != null) product.setMinimumStock(request.minimumStock());
+        if (request.active() != null) product.setActive(request.active());
+    }
+
+    public Page<ProductResponse> toDtoPage(Page<Product> page) {
+        return page.map(this::toDto);
+    }
+}
